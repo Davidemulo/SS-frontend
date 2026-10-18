@@ -26,6 +26,7 @@ import { InvoiceStatusBadge } from "@/components/invoices/InvoiceStatusBadge";
 import { InvestmentModal } from "@/components/invoices/InvestmentModal";
 import { InvoiceRatingWidget } from "@/components/invoices/InvoiceRatingWidget";
 import { ReturnsBreakdown } from "@/components/invoices/ReturnsBreakdown";
+import { SettlementTimeline } from "@/components/invoices/SettlementTimeline";
 import { ShareInvoiceButton } from "@/components/invoices/ShareInvoiceButton";
 import { WatchlistButton } from "@/components/invoices/WatchlistButton";
 import { useIsKycApproved } from "@/hooks/useKycStatus";
@@ -259,6 +260,16 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
         maturityDate={invoice.due_date}
         minInvestment={minInvestment}
       />
+
+      {/* Repayment ledger (#478): interim instalments and the final settlement,
+          shown once the invoice has been funded. */}
+      {(invoice.status === "funded" || invoice.status === "settled") && (
+        <SettlementTimeline
+          invoiceId={invoice.id}
+          totalDue={invoice.amount}
+          isSettled={invoice.status === "settled"}
+        />
+      )}
 
       {/*
         Demand signals (#422) and the maturity countdown (#423) sit directly

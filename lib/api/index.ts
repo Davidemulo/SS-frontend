@@ -764,6 +764,42 @@ export async function fetchInvoiceReturns(
   return res.json();
 }
 
+/* ─── Interim (partial) settlement payments (issue #478) ─────────────────── */
+
+/** One instalment the issuer has paid against a funded invoice. */
+export interface InterimPayment {
+  id: string;
+  amount: number;
+  /** ISO 8601 timestamp of the payment. */
+  paid_at: string;
+  tx_hash?: string | null;
+  /** Contract flag on the payment that closes the invoice. */
+  is_final?: boolean | null;
+}
+
+export interface InterimPaymentsResponse {
+  invoice_id: string;
+  /** Total amount the issuer is expected to repay. */
+  total_due: number;
+  /** Oldest first, as returned by the contract. */
+  payments: InterimPayment[];
+}
+
+/**
+ * Read-only `get_interim_payments` contract query: every instalment the issuer
+ * has made against a funded invoice. The backend indexes the contract, so the
+ * invoice id is the only input.
+ */
+export async function fetchInterimPayments(
+  invoiceId: string,
+): Promise<InterimPaymentsResponse> {
+  const res = await fetch(
+    `${API_BASE}/invoices/${encodeURIComponent(invoiceId)}/interim-payments`,
+  );
+  if (!res.ok) throw new Error("Failed to fetch interim payments");
+  return res.json();
+}
+
 export interface AdminInvoiceRow {
   invoiceId: string;
   sellerName: string;
