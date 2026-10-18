@@ -175,13 +175,24 @@ export interface UpcomingMaturity {
   days_remaining: number;
 }
 
-export interface WatchlistItem {
+/**
+ * One row from the on-chain watchlist registry (#474).
+ *
+ * The registry contract keys entries by investor address; the backend indexes
+ * it and exposes it over HTTP, which is why the address is an explicit input
+ * to every call below rather than being inferred from a session.
+ */
+export interface WatchlistRegistryEntry {
   invoice_id: string;
   added_at: string;
+  /** Status the investor last acknowledged for this invoice. */
+  last_seen_status?: Invoice["status"] | null;
+  /** When the registry observed the invoice's most recent transition. */
+  last_state_change_at?: string | null;
 }
 
-export interface WatchlistResponse {
-  items: WatchlistItem[];
+export interface WatchlistRegistryResponse {
+  items: WatchlistRegistryEntry[];
 }
 
 export interface BusinessDetails {
@@ -368,31 +379,55 @@ export async function fetchUpcomingMaturities(
   return res.json();
 }
 
-export async function fetchWatchlist(): Promise<WatchlistResponse> {
-  const res = await fetch(`${API_BASE}/watchlist`);
-  if (!res.ok) throw new Error("Failed to fetch watchlist");
+/**
+ * Reads the connected wallet's watchlist from the on-chain registry.
+ *
+ * The registry is the source of truth, so this is the only list the UI treats
+ * as authoritative; a local cache is only ever an optimistic overlay on top of
+ * it (see `useWatchlist`).
+ */
+export async function fetchWatchlistRegistry(
+  address: string,
+  token?: string,
+): Promise<WatchlistRegistryResponse> {
+  const params = new URLSearchParams({ address });
+  const res = await fetch(`${API_BASE}/watchlist?${params.toString()}`, {
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw new Error("Failed to fetch watchlist registry");
   return res.json();
 }
 
-export async function addToWatchlist(
+/** Submits the `watch` registry call for the connected wallet. */
+export async function watchInvoiceOnRegistry(
+  address: string,
   invoiceId: string,
+  token?: string,
 ): Promise<{ success: boolean }> {
   const res = await fetch(`${API_BASE}/watchlist`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ invoice_id: invoiceId }),
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify({ address, invoice_id: invoiceId }),
   });
-  if (!res.ok) throw new Error("Failed to add to watchlist");
+  if (!res.ok) throw new Error("Failed to add invoice to watchlist registry");
   return res.json();
 }
 
-export async function removeFromWatchlist(
+/** Submits the `unwatch` registry call for the connected wallet. */
+export async function unwatchInvoiceOnRegistry(
+  address: string,
   invoiceId: string,
+  token?: string,
 ): Promise<{ success: boolean }> {
-  const res = await fetch(`${API_BASE}/watchlist/${invoiceId}`, {
-    method: "DELETE",
-  });
-  if (!res.ok) throw new Error("Failed to remove from watchlist");
+  const params = new URLSearchParams({ address });
+  const res = await fetch(
+    `${API_BASE}/watchlist/${encodeURIComponent(invoiceId)}?${params.toString()}`,
+    {
+      method: "DELETE",
+      headers: authHeaders(token),
+    },
+  );
+  if (!res.ok) throw new Error("Failed to remove invoice from watchlist registry");
   return res.json();
 }
 
