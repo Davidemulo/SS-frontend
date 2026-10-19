@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { InvoiceCard } from "../invoice-card";
-import { ComparisonProvider } from "@/components/marketplace/InvoiceComparisonContext";
+import { renderWithCardProviders } from "./render-with-card-providers";
 import type { Invoice } from "@/lib/api";
 
 const TARGET = 10000;
@@ -26,7 +26,7 @@ function makeInvoice(overrides: Partial<Invoice> = {}): Invoice {
 
 /** The card renders an "Add to compare" control that reads the compare context. */
 function renderCard(ui: ReactElement) {
-    return render(<ComparisonProvider>{ui}</ComparisonProvider>);
+    return renderWithCardProviders(ui);
 }
 
 beforeEach(() => {
