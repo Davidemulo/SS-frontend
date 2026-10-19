@@ -17,6 +17,7 @@ import {
   InvestorDemandMetrics,
   MarketplaceFilterBar,
   SettlementCountdown,
+  SectorChips,
   TaxonomyFilterPanel,
   isExpired,
   type FundingStatus,
@@ -36,6 +37,9 @@ import {
   hasActiveTaxonomyFilters,
   parseTaxonomyFilters,
   removeTaxonomyFilterValue,
+  sectorCounts,
+  toggleTaxonomyFilter,
+  type InvoiceCategory as Sector,
   type FilterChip,
   type TaxonomyFilterState,
 } from "@/lib/invoiceTaxonomy";
@@ -46,7 +50,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WatchlistButton } from "@/components/marketplace/WatchlistButton";
+import { MarketplaceViewTabs } from "@/components/pools/PoolList";
 import { Money, ExchangeRateDisclaimer } from "@/components/currency";
+import { CurrencyToggle } from "@/components/layout/CurrencyToggle";
 import { ArrowDown, ArrowUp, Loader2 } from "lucide-react";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
@@ -310,6 +316,19 @@ export default function MarketplacePage() {
     handleTaxonomyChange(EMPTY_TAXONOMY_FILTERS);
   }, [handleTaxonomyChange]);
 
+  /** Sector chip toggle (#477): flips one sector, keeps risk/region intact. */
+  const handleToggleSector = useCallback(
+    (sector: Sector) => {
+      handleTaxonomyChange(toggleTaxonomyFilter(taxonomyFilters, "category", sector));
+    },
+    [handleTaxonomyChange, taxonomyFilters]
+  );
+
+  /** "Reset All" chip (#477): clears only the sector selection. */
+  const handleResetSectors = useCallback(() => {
+    handleTaxonomyChange({ ...taxonomyFilters, categories: [] });
+  }, [handleTaxonomyChange, taxonomyFilters]);
+
   const queryParamsObj = useMemo(() => {
     const obj: Record<string, string> = {};
     if (panelFilters.statuses.length > 0) obj.statuses = panelFilters.statuses.join(",");
@@ -401,6 +420,16 @@ export default function MarketplacePage() {
     }
     return result;
   }, [data]);
+
+  // Chip counts (#477). The sector selection is sent to the server, so once a
+  // chip is active the loaded list only holds those sectors and every other
+  // chip would read 0. Keep the counts from the last sector-unfiltered list
+  // instead, so toggling a chip never blanks out its neighbours.
+  const liveSectorCounts = useMemo(() => sectorCounts(allInvoices), [allInvoices]);
+  const unfilteredSectorCountsRef = useRef(liveSectorCounts);
+  if (taxonomyFilters.categories.length === 0) {
+    unfilteredSectorCountsRef.current = liveSectorCounts;
+  }
 
   /**
    * Mirrors the furthest-loaded cursor into the URL (Issue #365).
@@ -696,7 +725,20 @@ export default function MarketplacePage() {
   return (
     <ComparisonProvider>
       <main className="container mx-auto px-4 py-8 pb-24 space-y-8">
-        <h1 className="text-2xl font-bold">Invoice Marketplace</h1>
+        <div className="space-y-3">
+          <h1 className="text-2xl font-bold">Invoice Marketplace</h1>
+          <MarketplaceViewTabs active="invoices" />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-2xl font-bold">Invoice Marketplace</h1>
+            <CurrencyToggle showRate={false} />
+          </div>
+          <SectorChips
+            selected={taxonomyFilters.categories}
+            onToggle={handleToggleSector}
+            onReset={handleResetSectors}
+            counts={unfilteredSectorCountsRef.current}
+          />
+        </div>
         <ExchangeRateDisclaimer />
 
         {/* Featured: highest-yield live invoices, the discovery hook above the fold. */}
