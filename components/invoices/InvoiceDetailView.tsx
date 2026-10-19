@@ -23,10 +23,11 @@ import { DefaultResolutionView } from "@/components/invoices/DefaultResolutionVi
 import { InvoiceBackButton } from "@/components/invoices/InvoiceBackButton";
 import { InvoiceDocumentsTab } from "@/components/invoices/InvoiceDocumentsTab";
 import { InvoiceFinancials } from "@/components/invoices/InvoiceFinancials";
-import { InvoiceMaturityStatus } from "@/components/invoices/InvoiceMaturityStatus";
+import { InvoiceMaturitySection } from "@/components/invoices/InvoiceMaturitySection";
 import { InvoiceMetaTags } from "@/components/invoices/InvoiceMetaTags";
 import { InvestorSocialProof } from "@/components/invoices/InvestorSocialProof";
 import { InvoiceStatusBadge } from "@/components/invoices/InvoiceStatusBadge";
+import { ReturnsCalculator } from "@/components/invoices/ReturnsCalculator";
 import { InvestmentModal } from "@/components/invoices/InvestmentModal";
 import { InvoiceRatingWidget } from "@/components/invoices/InvoiceRatingWidget";
 import { ReturnsBreakdown } from "@/components/invoices/ReturnsBreakdown";
@@ -38,6 +39,7 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 import { useProtocolStatus } from "@/hooks/useProtocolStatus";
 import { useWallet } from "@/context/WalletContext";
 import { isExpired } from "@/components/marketplace";
+import { OrderBookDepthChart } from "@/components/marketplace/OrderBookDepthChart";
 import { InvestorDemandMetrics } from "@/components/marketplace/InvestorDemandMetrics";
 import { InvoiceClassificationBadges } from "@/components/marketplace/InvoiceClassificationBadges";
 import { InvoiceTagPills } from "@/components/marketplace/InvoiceTagPills";
@@ -46,6 +48,7 @@ import { InvoiceFraudReport } from "@/components/invoices/InvoiceFraudReport";
 import { truncateAddress } from "@/lib/stellar";
 import { DEFAULT_MIN_INVESTMENT } from "@/lib/invoiceDefaults";
 import { Money } from "@/components/currency";
+import { CurrencyToggle } from "@/components/layout/CurrencyToggle";
 
 function InvoiceDetailSkeleton() {
   return (
@@ -109,11 +112,17 @@ function InvestCallToAction({
   minInvestment,
   maxInvestment,
   fundingCap,
+  yieldPercentage,
+  maturityDate,
+  fractionPrice,
 }: {
   invoiceId: string;
   minInvestment: number;
   maxInvestment: number;
   fundingCap: number;
+  yieldPercentage?: number | null;
+  maturityDate: string;
+  fractionPrice?: number;
 }) {
   const { isConnected } = useWallet();
   const { isApproved, isLoading, status } = useIsKycApproved({
@@ -172,6 +181,12 @@ function InvestCallToAction({
           minInvestment={minInvestment}
           maxInvestment={maxInvestment}
           fundingCap={fundingCap}
+        />
+        <ReturnsCalculator
+          faceValue={fundingCap}
+          yieldPercentage={yieldPercentage}
+          maturityDate={maturityDate}
+          fractionPrice={fractionPrice}
         />
       </CardContent>
     </Card>
@@ -277,6 +292,15 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
                 <InvoiceFraudReport invoiceId={invoice.id} issuerId={invoice.seller} />
               </div>
             </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <CurrencyToggle showRate={false} />
+              <InvoiceStatusBadge status={invoice.status} />
+              <DaysRemainingBadge dueDate={invoice.due_date} status={invoice.status} />
+              <WatchlistButton invoiceId={invoice.id} />
+              <ShareInvoiceButton invoiceId={invoice.id} title={invoice.title} />
+              <InvoiceFraudReport invoiceId={invoice.id} issuerId={invoice.seller} />
+            </div>
+          </div>
 
             {invoice.description && (
               <p className="pt-2 text-sm text-muted-foreground" data-testid="invoice-description">
@@ -293,6 +317,15 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
         maturityDate={invoice.due_date}
         minInvestment={minInvestment}
       />
+
+      {invoice.status === "funded" && (
+        <InvoiceMaturitySection
+          invoiceId={invoice.id}
+          maturityDate={invoice.maturity_date}
+          faceValue={invoice.amount}
+          latePenaltyAccrued={invoice.late_penalty_accrued}
+        />
+      )}
 
       {/*
         Demand signals (#422) and the maturity countdown (#423) sit directly
@@ -379,6 +412,8 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
         </Card>
       )}
 
+      <OrderBookDepthChart invoiceId={invoice.id} />
+
       {/* Invest CTA — KYC gated. */}
       {isOpenForInvestment ? (
         <InvestCallToAction
@@ -386,6 +421,9 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
           minInvestment={minInvestment}
           maxInvestment={remaining}
           fundingCap={invoice.amount}
+          yieldPercentage={invoice.yield_percentage}
+          maturityDate={invoice.maturity_date ?? invoice.due_date}
+          fractionPrice={invoice.fraction_price}
         />
       ) : (
         <Card data-testid="invest-cta">
@@ -445,10 +483,6 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
             ))}
           </CardContent>
         </Card>
-      )}
-
-      {invoice.status === "funded" && (
-        <InvoiceMaturityStatus maturityDate={invoice.maturity_date} />
       )}
 
       {(invoice.status === "settled" || invoice.status === "funded") && (

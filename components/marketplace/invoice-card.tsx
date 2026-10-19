@@ -45,7 +45,7 @@ export function InvoiceCard({ invoice, onInvest }: InvoiceCardProps) {
       : null;
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col" data-tour="invoice-card">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="line-clamp-1 text-base">

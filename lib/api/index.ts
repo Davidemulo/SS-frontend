@@ -1,3 +1,4 @@
+import { parseInvestError } from "@/lib/investCurrency";
 import type { InvestmentPosition } from "@/lib/portfolio";
 import type { KycTier } from "@/lib/kycTier";
 
@@ -13,6 +14,8 @@ export interface Invoice {
   status: "draft" | "pending" | "open" | "funded" | "settled" | "rejected" | "defaulted";
   due_date: string;
   yield_percentage?: number;
+  /** Price of one fraction in XLM; the calculator assumes 1 XLM when absent. */
+  fraction_price?: number;
   /** Minimum investment amount in XLM required for this invoice (#436). */
   min_investment?: number;
   /** Amount the invoice must raise before it can proceed (#462). */
@@ -44,6 +47,8 @@ export interface Invoice {
    * because older backend responses may not populate it yet — UI must
    * degrade gracefully when absent rather than assume it's always present. */
   maturity_date?: string | null;
+  /** Late penalty accrued on-chain after the grace period (issue #498). */
+  late_penalty_accrued?: number | null;
 }
 
 /** Category tabs on the marketplace homepage (#452). */
@@ -306,6 +311,21 @@ export async function fetchXlmUsdRate(): Promise<XlmUsdRate> {
   return res.json();
 }
 
+/**
+ * FX oracle rates for the display-currency toggle (#504): the value of 1 XLM
+ * in USDC, EURC and NGNC, plus when the oracle last updated.
+ */
+export interface FxRatesResponse {
+  rates: { USD?: number; EUR?: number; NGN?: number };
+  updated_at: string;
+}
+
+export async function fetchFxRates(): Promise<FxRatesResponse> {
+  const res = await fetch(`${API_BASE}/rates/fx`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to fetch FX rates");
+  return res.json();
+}
+
 export interface InvestInInvoiceResult {
   success: boolean;
   invested_amount: number;
@@ -318,13 +338,19 @@ export interface InvestInInvoiceResult {
 export async function investInInvoice(
   invoiceId: string,
   amount: number,
+  currency?: string,
 ): Promise<InvestInInvoiceResult> {
   const res = await fetch(`${API_BASE}/invoices/${invoiceId}/invest`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ amount }),
+    body: JSON.stringify(currency ? { amount, currency } : { amount }),
   });
-  if (!res.ok) throw new Error("Investment failed");
+  if (!res.ok) {
+    if (currency) {
+      throw parseInvestError(await res.json().catch(() => null));
+    }
+    throw new Error("Investment failed");
+  }
   return res.json();
 }
 
@@ -2301,186 +2327,31 @@ export async function confirmTwoFactorSetup(code: string, token?: string): Promi
   if (!res.ok) return readAccountError(res, "Invalid verification code");
 }
 
-/* ─── Secondary market: limit orders (#480) ─────────────────────────────── */
+/* ─── Order book depth (#503) ─── */
 
-export interface LimitOrder {
-  id: string;
-  invoice_id: string;
-  investor_address: string;
-  fraction_amount: number;
-  max_price_per_fraction: number;
-  total_escrowed: number;
-  status: "open" | "filled" | "cancelled" | "expired";
-  created_at: string;
+export interface OrderBookLevel {
+  /** Price per fraction, in XLM. */
+  price: number;
+  /** Fractions open at this price (not cumulative). */
+  quantity: number;
 }
 
-export interface PlaceLimitOrderInput {
-  invoice_id: string;
-  fraction_amount: number;
-  max_price_per_fraction: number;
+export interface InvoiceOrderBook {
+  /** Open buy orders. */
+  bids: OrderBookLevel[];
+  /** Open listings. */
+  asks: OrderBookLevel[];
+  /** Mid-price from the API; derived from best bid and ask when absent. */
+  mid_price?: number | null;
 }
 
-export interface PlaceLimitOrderResult {
-  success: boolean;
-  order: LimitOrder;
-  transaction_hash?: string;
-}
-
-export async function fetchActiveLimitOrders(
-  walletAddress: string
-): Promise<LimitOrder[]> {
-  const url = new URL(
-    `${API_BASE}/marketplace/limit-orders`,
-    typeof window !== "undefined" ? window.location.href : "http://localhost"
-  );
-  url.searchParams.set("address", walletAddress);
-  url.searchParams.set("status", "open");
-  const res = await fetch(url.toString());
-  if (!res.ok) throw new Error("Failed to fetch limit orders");
-  const json = await res.json();
-  return Array.isArray(json) ? json : (json.orders ?? []);
-}
-
-export async function placeLimitOrder(
-  input: PlaceLimitOrderInput
-): Promise<PlaceLimitOrderResult> {
-  const res = await fetch(`${API_BASE}/marketplace/limit-orders`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      invoice_id: input.invoice_id,
-      fraction_amount: input.fraction_amount,
-      max_price_per_fraction: input.max_price_per_fraction,
-    }),
+export async function fetchInvoiceOrderBook(
+  invoiceId: string,
+  signal?: AbortSignal,
+): Promise<InvoiceOrderBook> {
+  const res = await fetch(`${API_BASE}/invoices/${encodeURIComponent(invoiceId)}/orderbook`, {
+    signal,
   });
-  if (!res.ok) {
-    const msg = await readErrorMessage(res, "Failed to place limit order");
-    throw new Error(msg);
-  }
-  return res.json();
-}
-
-export async function cancelLimitOrder(orderId: string): Promise<void> {
-  const res = await fetch(
-    `${API_BASE}/marketplace/limit-orders/${encodeURIComponent(orderId)}/cancel`,
-    { method: "POST" }
-  );
-  if (!res.ok) {
-    const msg = await readErrorMessage(res, "Failed to cancel limit order");
-    throw new Error(msg);
-  }
-}
-
-/* ─── Yield vesting for investors (#479) ────────────────────────────────── */
-
-export interface YieldTranche {
-  id: string;
-  invoice_id: string;
-  invoice_title: string;
-  tranche_index: number;
-  total_tranches: number;
-  total_yield: number;
-  amount: number;
-  claimed: boolean;
-  release_timestamp: string;
-}
-
-export interface InvoiceYieldVesting {
-  invoice_id: string;
-  invoice_title: string;
-  total_yield: number;
-  claimed_yield: number;
-  tranches: YieldTranche[];
-}
-
-export async function fetchYieldVesting(
-  walletAddress: string
-): Promise<InvoiceYieldVesting[]> {
-  const res = await fetch(
-    `${API_BASE}/investor/yield-vesting?address=${encodeURIComponent(walletAddress)}`
-  );
-  if (!res.ok) throw new Error("Failed to fetch yield vesting");
-  const json = await res.json();
-  return Array.isArray(json) ? json : (json.schedules ?? []);
-}
-
-export interface ClaimTrancheResult {
-  success: boolean;
-  transaction_hash?: string;
-  claimed_amount: number;
-}
-
-export async function claimYieldTranche(trancheId: string): Promise<ClaimTrancheResult> {
-  const res = await fetch(
-    `${API_BASE}/investor/yield-vesting/${encodeURIComponent(trancheId)}/claim`,
-    { method: "POST" }
-  );
-  if (!res.ok) {
-    const msg = await readErrorMessage(res, "Failed to claim tranche");
-    throw new Error(msg);
-  }
-  return res.json();
-}
-
-export async function claimAllYieldTranches(
-  walletAddress: string
-): Promise<ClaimTrancheResult> {
-  const res = await fetch(`${API_BASE}/investor/yield-vesting/claim-all`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ wallet_address: walletAddress }),
-  });
-  if (!res.ok) {
-    const msg = await readErrorMessage(res, "Failed to claim all tranches");
-    throw new Error(msg);
-  }
-  return res.json();
-}
-
-/* ─── Invoice funding threshold (#481) ─────────────────────────────────── */
-
-export interface FundingThresholdDetail {
-  invoice_id: string;
-  min_threshold: number;
-  max_cap: number;
-  raised: number;
-  hours_until_close: number | null;
-}
-
-export async function fetchFundingThresholdDetail(
-  invoiceId: string
-): Promise<FundingThresholdDetail> {
-  const res = await fetch(`${API_BASE}/invoices/${encodeURIComponent(invoiceId)}/funding-threshold`);
-  if (!res.ok) throw new Error("Failed to fetch funding threshold");
-  return res.json();
-}
-
-/* ─── Default resolution (#483) ─────────────────────────────────────────── */
-
-export interface DefaultResolutionHolder {
-  address: string;
-  investment_amount: number;
-  recovery_amount: number;
-  recovery_paid: boolean;
-}
-
-export interface DefaultResolution {
-  invoice_id: string;
-  invoice_title: string;
-  declaration_date: string;
-  collateral_forfeited: number;
-  total_recovery_distributed: number;
-  recovery_distribution_pending: boolean;
-  holders: DefaultResolutionHolder[];
-  dispute_form_url: string;
-}
-
-export async function fetchDefaultResolution(
-  invoiceId: string
-): Promise<DefaultResolution> {
-  const res = await fetch(
-    `${API_BASE}/invoices/${encodeURIComponent(invoiceId)}/default-resolution`
-  );
-  if (!res.ok) throw new Error("Failed to fetch default resolution");
+  if (!res.ok) throw new Error("Failed to fetch order book");
   return res.json();
 }

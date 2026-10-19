@@ -51,6 +51,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WatchlistButton } from "@/components/marketplace/WatchlistButton";
 import { Money, ExchangeRateDisclaimer } from "@/components/currency";
+import { CurrencyToggle } from "@/components/layout/CurrencyToggle";
 import { ArrowDown, ArrowUp, Loader2 } from "lucide-react";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
@@ -724,7 +725,10 @@ export default function MarketplacePage() {
     <ComparisonProvider>
       <main className="container mx-auto px-4 py-8 pb-24 space-y-8">
         <div className="space-y-3">
-          <h1 className="text-2xl font-bold">Invoice Marketplace</h1>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-2xl font-bold">Invoice Marketplace</h1>
+            <CurrencyToggle showRate={false} />
+          </div>
           <SectorChips
             selected={taxonomyFilters.categories}
             onToggle={handleToggleSector}
