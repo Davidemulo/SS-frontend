@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, useEffect } from "react";
+import { Suspense, useCallback, useMemo, useRef, useState, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { fetchInvoices, resolveInvoiceCategory, type Invoice, type InvoiceCategory } from "@/lib/api";
@@ -166,6 +166,14 @@ function InvoiceRow({ invoice }: { invoice: Invoice }) {
 }
 
 export default function MarketplacePage() {
+  return (
+    <Suspense fallback={null}>
+      <MarketplacePageContent />
+    </Suspense>
+  );
+}
+
+function MarketplacePageContent() {
   usePageTitle("Browse Invoices");
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -944,3 +952,4 @@ export default function MarketplacePage() {
     </ComparisonProvider>
   );
 }
+

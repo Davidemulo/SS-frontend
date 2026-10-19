@@ -44,7 +44,6 @@ import { InvestorDemandMetrics } from "@/components/marketplace/InvestorDemandMe
 import { InvoiceClassificationBadges } from "@/components/marketplace/InvoiceClassificationBadges";
 import { InvoiceTagPills } from "@/components/marketplace/InvoiceTagPills";
 import { SettlementCountdown } from "@/components/marketplace/SettlementCountdown";
-import { InvoiceFraudReport } from "@/components/invoices/InvoiceFraudReport";
 import { AnnouncementFeed } from "@/components/invoices/AnnouncementFeed";
 import { SyndicatePanel } from "@/components/invoices/SyndicatePanel";
 import { InvoiceFraudReport, InvoiceUnderReviewBanner } from "@/components/invoices/InvoiceFraudReport";
