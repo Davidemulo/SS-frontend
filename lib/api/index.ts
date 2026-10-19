@@ -13,6 +13,8 @@ export interface Invoice {
   status: "draft" | "pending" | "open" | "funded" | "settled" | "rejected";
   due_date: string;
   yield_percentage?: number;
+  /** Price of one fraction in XLM; the calculator assumes 1 XLM when absent. */
+  fraction_price?: number;
   /** Minimum investment amount in XLM required for this invoice (#436). */
   min_investment?: number;
   /** Amount the invoice must raise before it can proceed (#462). */
@@ -303,6 +305,21 @@ export interface XlmUsdRate {
 export async function fetchXlmUsdRate(): Promise<XlmUsdRate> {
   const res = await fetch(`${API_BASE}/rates/xlm-usd`);
   if (!res.ok) throw new Error("Failed to fetch XLM/USD rate");
+  return res.json();
+}
+
+/**
+ * FX oracle rates for the display-currency toggle (#504): the value of 1 XLM
+ * in USDC, EURC and NGNC, plus when the oracle last updated.
+ */
+export interface FxRatesResponse {
+  rates: { USD?: number; EUR?: number; NGN?: number };
+  updated_at: string;
+}
+
+export async function fetchFxRates(): Promise<FxRatesResponse> {
+  const res = await fetch(`${API_BASE}/rates/fx`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to fetch FX rates");
   return res.json();
 }
 
@@ -2299,4 +2316,33 @@ export async function confirmTwoFactorSetup(code: string, token?: string): Promi
     body: JSON.stringify({ code }),
   });
   if (!res.ok) return readAccountError(res, "Invalid verification code");
+}
+
+/* ─── Order book depth (#503) ─── */
+
+export interface OrderBookLevel {
+  /** Price per fraction, in XLM. */
+  price: number;
+  /** Fractions open at this price (not cumulative). */
+  quantity: number;
+}
+
+export interface InvoiceOrderBook {
+  /** Open buy orders. */
+  bids: OrderBookLevel[];
+  /** Open listings. */
+  asks: OrderBookLevel[];
+  /** Mid-price from the API; derived from best bid and ask when absent. */
+  mid_price?: number | null;
+}
+
+export async function fetchInvoiceOrderBook(
+  invoiceId: string,
+  signal?: AbortSignal,
+): Promise<InvoiceOrderBook> {
+  const res = await fetch(`${API_BASE}/invoices/${encodeURIComponent(invoiceId)}/orderbook`, {
+    signal,
+  });
+  if (!res.ok) throw new Error("Failed to fetch order book");
+  return res.json();
 }

@@ -67,7 +67,9 @@ export function InvestmentModal({
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button data-testid="invest-button">Invest</Button>
+        <Button data-testid="invest-button" data-tour="invest-button">
+          Invest
+        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0">
         {!isAcknowledged ? (
