@@ -2520,6 +2520,9 @@ export async function fetchAutoInvestExecutedEvents(
     { headers: authHeaders(token) },
   );
   if (!res.ok) throw new Error("Failed to fetch auto-invest activity");
+  return res.json();
+}
+
 // ---------------------------------------------------------------------------
 // Issuer announcements (#502)
 // ---------------------------------------------------------------------------
@@ -2714,6 +2717,9 @@ export async function fetchInvestorLoyalty(wallet: string): Promise<InvestorLoya
     `${API_BASE}/investors/${encodeURIComponent(wallet)}/loyalty`,
   );
   if (!res.ok) throw new Error("Failed to fetch loyalty");
+  return res.json();
+}
+
 /* ─── Order book depth (#503) ─── */
 
 export interface OrderBookLevel {
