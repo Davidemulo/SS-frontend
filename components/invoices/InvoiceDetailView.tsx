@@ -44,7 +44,9 @@ import { InvestorDemandMetrics } from "@/components/marketplace/InvestorDemandMe
 import { InvoiceClassificationBadges } from "@/components/marketplace/InvoiceClassificationBadges";
 import { InvoiceTagPills } from "@/components/marketplace/InvoiceTagPills";
 import { SettlementCountdown } from "@/components/marketplace/SettlementCountdown";
-import { InvoiceFraudReport } from "@/components/invoices/InvoiceFraudReport";
+import { InvoiceFraudReport, InvoiceUnderReviewBanner } from "@/components/invoices/InvoiceFraudReport";
+import { InvoiceRiskAlert } from "@/components/invoices/InvoiceRiskAlert";
+import { InvoiceBenchmarkCard } from "@/components/invoices/InvoiceBenchmarkCard";
 import { truncateAddress } from "@/lib/stellar";
 import { DEFAULT_MIN_INVESTMENT } from "@/lib/invoiceDefaults";
 import { Money } from "@/components/currency";
@@ -285,23 +287,14 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
                 </div>
               </div>
               <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <CurrencyToggle showRate={false} />
                 <InvoiceStatusBadge status={invoice.status} />
                 <DaysRemainingBadge dueDate={invoice.due_date} status={invoice.status} />
                 <WatchlistButton invoiceId={invoice.id} />
                 <ShareInvoiceButton invoiceId={invoice.id} title={invoice.title} />
-                <InvoiceFraudReport invoiceId={invoice.id} issuerId={invoice.seller} />
+                <InvoiceFraudReport invoiceId={invoice.id} isInvestor={isQualifyingInvestor} />
               </div>
             </div>
-            <div className="flex shrink-0 flex-wrap items-center gap-2">
-              <CurrencyToggle showRate={false} />
-              <InvoiceStatusBadge status={invoice.status} />
-              <DaysRemainingBadge dueDate={invoice.due_date} status={invoice.status} />
-              <WatchlistButton invoiceId={invoice.id} />
-              <ShareInvoiceButton invoiceId={invoice.id} title={invoice.title} />
-              <InvoiceFraudReport invoiceId={invoice.id} issuerId={invoice.seller} />
-            </div>
-          </div>
-
             {invoice.description && (
               <p className="pt-2 text-sm text-muted-foreground" data-testid="invoice-description">
                 {invoice.description}
@@ -311,12 +304,17 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
         </Card>
       )}
 
+      <InvoiceRiskAlert invoiceId={invoice.id} />
+      <InvoiceUnderReviewBanner invoiceId={invoice.id} />
+
       <InvoiceFinancials
         faceValue={invoice.amount}
         yieldPercentage={invoice.yield_percentage}
         maturityDate={invoice.due_date}
         minInvestment={minInvestment}
       />
+
+      <InvoiceBenchmarkCard invoiceId={invoice.id} />
 
       {invoice.status === "funded" && (
         <InvoiceMaturitySection
