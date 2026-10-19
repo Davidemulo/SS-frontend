@@ -8,7 +8,6 @@ import { InvoiceClassificationBadges } from "./InvoiceClassificationBadges";
 import { CompareToggleButton } from "./CompareToggleButton";
 import { SettlementCountdown } from "./SettlementCountdown";
 import { InvestorDemandMetrics } from "./InvestorDemandMetrics";
-import { CompareToggleButton } from "./CompareToggleButton";
 import { useComparison } from "./InvoiceComparisonContext";
 import { ShareInvoiceButton } from "@/components/invoices/ShareInvoiceButton";
 import { Lock, Scale } from "lucide-react";

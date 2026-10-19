@@ -105,12 +105,20 @@ export function InvestorPortfolio() {
             Payout History
           </button>
         </div>
-        <Link
-          href="/investor/settlements"
-          className="pb-2 text-sm text-primary hover:underline"
-        >
-          Claim settlements
-        </Link>
+        <div className="flex gap-4 pb-2">
+          <Link
+            href="/investor/snapshots"
+            className="text-sm text-primary hover:underline"
+          >
+            Snapshot distributions
+          </Link>
+          <Link
+            href="/investor/settlements"
+            className="text-sm text-primary hover:underline"
+          >
+            Claim settlements
+          </Link>
+        </div>
       </div>
 
       {activeTab === "active" ? (

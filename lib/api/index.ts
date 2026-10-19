@@ -1,3 +1,4 @@
+import { parseInvestError } from "@/lib/investCurrency";
 import type { InvestmentPosition } from "@/lib/portfolio";
 import type { KycTier } from "@/lib/kycTier";
 
@@ -44,6 +45,8 @@ export interface Invoice {
    * because older backend responses may not populate it yet — UI must
    * degrade gracefully when absent rather than assume it's always present. */
   maturity_date?: string | null;
+  /** Late penalty accrued on-chain after the grace period (issue #498). */
+  late_penalty_accrued?: number | null;
 }
 
 /** Category tabs on the marketplace homepage (#452). */
@@ -318,13 +321,19 @@ export interface InvestInInvoiceResult {
 export async function investInInvoice(
   invoiceId: string,
   amount: number,
+  currency?: string,
 ): Promise<InvestInInvoiceResult> {
   const res = await fetch(`${API_BASE}/invoices/${invoiceId}/invest`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ amount }),
+    body: JSON.stringify(currency ? { amount, currency } : { amount }),
   });
-  if (!res.ok) throw new Error("Investment failed");
+  if (!res.ok) {
+    if (currency) {
+      throw parseInvestError(await res.json().catch(() => null));
+    }
+    throw new Error("Investment failed");
+  }
   return res.json();
 }
 
