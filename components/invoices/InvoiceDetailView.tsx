@@ -16,6 +16,10 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DaysRemainingBadge } from "@/components/invoices/DaysRemaining";
 import { FundingProgressBar } from "@/components/invoices/FundingProgressBar";
+import { FundingThresholdWarningBadge } from "@/components/invoices/FundingThresholdWarningBadge";
+import { FundingFailedCard } from "@/components/invoices/FundingFailedCard";
+import { SecondaryMarketTabsPanel } from "@/components/invoices/SecondaryMarketTabsPanel";
+import { DefaultResolutionView } from "@/components/invoices/DefaultResolutionView";
 import { InvoiceBackButton } from "@/components/invoices/InvoiceBackButton";
 import { InvoiceDocumentsTab } from "@/components/invoices/InvoiceDocumentsTab";
 import { InvoiceFinancials } from "@/components/invoices/InvoiceFinancials";
@@ -227,28 +231,65 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
         investorCount={invoice.investor_count}
       />
 
-      {/* Header: title, issuer, status and time left to fund. */}
-      <Card data-testid="invoice-detail-header">
-        <CardHeader>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-2">
-              <InvoiceBackButton />
-              <div className="min-w-0">
-                <h1 className="truncate text-2xl font-bold" data-testid="invoice-title">
-                  {invoice.title}
-                </h1>
-                <p className="mt-1 text-sm text-muted-foreground" data-testid="invoice-issuer">
-                  Issuer:{" "}
-                  {/* The seller address doubles as the issuer id, so the public
-                      issuer profile (#400) is reachable from every invoice. */}
-                  <Link
-                    href={`/issuers/${encodeURIComponent(invoice.seller)}`}
-                    data-testid="issuer-profile-link"
-                    className="font-mono hover:underline"
-                  >
-                    {truncateAddress(invoice.seller)}
-                  </Link>
-                </p>
+      {/* Defaulted invoices: replace normal header with the default resolution
+          status view which shows the declaration, collateral, recovery, and
+          per-holder receipt (#483). */}
+      {invoice.status === "defaulted" ? (
+        <>
+          <Card data-testid="invoice-detail-header">
+            <CardHeader>
+              <div className="flex min-w-0 items-center gap-2">
+                <InvoiceBackButton />
+                <div className="min-w-0">
+                  <h1 className="truncate text-2xl font-bold" data-testid="invoice-title">
+                    {invoice.title}
+                  </h1>
+                  <p className="mt-1 text-sm text-muted-foreground" data-testid="invoice-issuer">
+                    Issuer:{" "}
+                    <Link
+                      href={`/issuers/${encodeURIComponent(invoice.seller)}`}
+                      className="font-mono hover:underline"
+                    >
+                      {truncateAddress(invoice.seller)}
+                    </Link>
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+          <DefaultResolutionView invoiceId={invoice.id} connectedAddress={address} />
+        </>
+      ) : (
+        /* Normal header: title, issuer, status and time left to fund. */
+        <Card data-testid="invoice-detail-header">
+          <CardHeader>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <InvoiceBackButton />
+                <div className="min-w-0">
+                  <h1 className="truncate text-2xl font-bold" data-testid="invoice-title">
+                    {invoice.title}
+                  </h1>
+                  <p className="mt-1 text-sm text-muted-foreground" data-testid="invoice-issuer">
+                    Issuer:{" "}
+                    {/* The seller address doubles as the issuer id, so the public
+                        issuer profile (#400) is reachable from every invoice. */}
+                    <Link
+                      href={`/issuers/${encodeURIComponent(invoice.seller)}`}
+                      data-testid="issuer-profile-link"
+                      className="font-mono hover:underline"
+                    >
+                      {truncateAddress(invoice.seller)}
+                    </Link>
+                  </p>
+                </div>
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <InvoiceStatusBadge status={invoice.status} />
+                <DaysRemainingBadge dueDate={invoice.due_date} status={invoice.status} />
+                <WatchlistButton invoiceId={invoice.id} />
+                <ShareInvoiceButton invoiceId={invoice.id} title={invoice.title} />
+                <InvoiceFraudReport invoiceId={invoice.id} issuerId={invoice.seller} />
               </div>
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -261,13 +302,14 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
             </div>
           </div>
 
-          {invoice.description && (
-            <p className="pt-2 text-sm text-muted-foreground" data-testid="invoice-description">
-              {invoice.description}
-            </p>
-          )}
-        </CardHeader>
-      </Card>
+            {invoice.description && (
+              <p className="pt-2 text-sm text-muted-foreground" data-testid="invoice-description">
+                {invoice.description}
+              </p>
+            )}
+          </CardHeader>
+        </Card>
+      )}
 
       <InvoiceFinancials
         faceValue={invoice.amount}
@@ -316,28 +358,59 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
       </Card>
 
       {/* Funding progress: amount raised against the cap, with the minimum
-          threshold marked when the invoice has one (#462). */}
-      <Card>
-        <CardHeader>
-          <h2 className="text-lg font-semibold">Funding progress</h2>
-        </CardHeader>
-        <CardContent>
-          <FundingProgressBar
-            raised={invoice.raised}
-            target={invoice.max_funding_cap ?? invoice.amount}
-            minThreshold={invoice.min_funding_threshold}
-            investorCount={invoice.investor_count}
-          />
-          <div className="mt-3">
-            <InvestorSocialProof count={invoice.investor_count} />
-          </div>
-          {isFetching && (
-            <p className="mt-2 text-xs text-muted-foreground" data-testid="invoice-refreshing">
-              Refreshing…
-            </p>
-          )}
-        </CardContent>
-      </Card>
+          threshold marked when the invoice has one (#462).
+          A FundingFailedCard replaces the bar for invoices where the threshold
+          was missed (#481). */}
+      {invoice.status === "rejected" &&
+      invoice.min_funding_threshold != null &&
+      invoice.raised < invoice.min_funding_threshold ? (
+        <FundingFailedCard
+          raised={invoice.raised}
+          minThreshold={invoice.min_funding_threshold}
+          closedAt={invoice.due_date}
+        />
+      ) : (
+        <Card>
+          <CardHeader>
+            <h2 className="text-lg font-semibold">Funding progress</h2>
+          </CardHeader>
+          <CardContent>
+            <FundingProgressBar
+              raised={invoice.raised}
+              target={invoice.max_funding_cap ?? invoice.amount}
+              minThreshold={invoice.min_funding_threshold}
+              investorCount={invoice.investor_count}
+            />
+            {/* Threshold warning badge: only visible within 24h of close (#481) */}
+            {invoice.status === "open" && (
+              <div className="mt-3">
+                <FundingThresholdWarningBadge
+                  raised={invoice.raised}
+                  target={invoice.max_funding_cap ?? invoice.amount}
+                  minThreshold={invoice.min_funding_threshold}
+                  hoursUntilClose={
+                    invoice.due_date
+                      ? Math.max(
+                          0,
+                          (new Date(invoice.due_date).getTime() - Date.now()) /
+                            (1000 * 60 * 60)
+                        )
+                      : null
+                  }
+                />
+              </div>
+            )}
+            <div className="mt-3">
+              <InvestorSocialProof count={invoice.investor_count} />
+            </div>
+            {isFetching && (
+              <p className="mt-2 text-xs text-muted-foreground" data-testid="invoice-refreshing">
+                Refreshing…
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <OrderBookDepthChart invoiceId={invoice.id} />
 
@@ -414,6 +487,13 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
 
       {(invoice.status === "settled" || invoice.status === "funded") && (
         <ReturnsBreakdown invoiceId={invoice.id} />
+      )}
+
+      {/* Secondary market: Buy Now + Limit Order tabs (#480).
+          Only shown for funded invoices — the primary market is still active
+          for open invoices. */}
+      {invoice.status === "funded" && (
+        <SecondaryMarketTabsPanel invoiceId={invoice.id} walletAddress={address} />
       )}
     </div>
   );

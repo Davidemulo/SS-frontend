@@ -11,7 +11,7 @@ export interface Invoice {
   amount: number;
   raised: number;
   investor_count: number;
-  status: "draft" | "pending" | "open" | "funded" | "settled" | "rejected";
+  status: "draft" | "pending" | "open" | "funded" | "settled" | "rejected" | "defaulted";
   due_date: string;
   yield_percentage?: number;
   /** Price of one fraction in XLM; the calculator assumes 1 XLM when absent. */

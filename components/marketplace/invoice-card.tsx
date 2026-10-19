@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FundingProgressBar } from "@/components/invoices/FundingProgressBar";
+import { FundingThresholdWarningBadge } from "@/components/invoices/FundingThresholdWarningBadge";
 import { CountdownTimer, isExpired } from "./countdown-timer";
 import { InvoiceTagPills } from "./InvoiceTagPills";
 import { InvoiceClassificationBadges } from "./InvoiceClassificationBadges";
@@ -34,6 +35,15 @@ export function InvoiceCard({ invoice, onInvest }: InvoiceCardProps) {
   const grade = invoice.risk_rating?.tier;
   const locked = !canInvestInGrade(tier, grade);
 
+  // Compute hours remaining so the threshold warning badge knows whether to show.
+  const hoursUntilClose =
+    invoice.due_date
+      ? Math.max(
+          0,
+          (new Date(invoice.due_date).getTime() - Date.now()) / (1000 * 60 * 60)
+        )
+      : null;
+
   return (
     <Card className="flex flex-col" data-tour="invoice-card">
       <CardHeader className="pb-3">
@@ -63,6 +73,16 @@ export function InvoiceCard({ invoice, onInvest }: InvoiceCardProps) {
           minThreshold={invoice.min_funding_threshold}
           investorCount={invoice.investor_count}
         />
+
+        {/* Threshold warning: visible when closing within 24h and min threshold unmet (#481) */}
+        {published && !expired && (
+          <FundingThresholdWarningBadge
+            raised={invoice.raised}
+            target={invoice.max_funding_cap ?? invoice.amount}
+            minThreshold={invoice.min_funding_threshold}
+            hoursUntilClose={hoursUntilClose}
+          />
+        )}
 
         {/*
           Maturity countdown (#423) and demand signals (#422). The funding
