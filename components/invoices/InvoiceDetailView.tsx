@@ -45,7 +45,6 @@ import { InvestorDemandMetrics } from "@/components/marketplace/InvestorDemandMe
 import { InvoiceClassificationBadges } from "@/components/marketplace/InvoiceClassificationBadges";
 import { InvoiceTagPills } from "@/components/marketplace/InvoiceTagPills";
 import { SettlementCountdown } from "@/components/marketplace/SettlementCountdown";
-import { InvoiceFraudReport } from "@/components/invoices/InvoiceFraudReport";
 import { AnnouncementFeed } from "@/components/invoices/AnnouncementFeed";
 import { SyndicatePanel } from "@/components/invoices/SyndicatePanel";
 import { InvoiceFraudReport, InvoiceUnderReviewBanner } from "@/components/invoices/InvoiceFraudReport";
@@ -317,6 +316,16 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
         maturityDate={invoice.due_date}
         minInvestment={minInvestment}
       />
+
+      {/* Repayment ledger (#478): interim instalments and the final settlement,
+          shown once the invoice has been funded. */}
+      {(invoice.status === "funded" || invoice.status === "settled") && (
+        <SettlementTimeline
+          invoiceId={invoice.id}
+          totalDue={invoice.amount}
+          isSettled={invoice.status === "settled"}
+        />
+      )}
 
       <InvoiceBenchmarkCard invoiceId={invoice.id} />
 
