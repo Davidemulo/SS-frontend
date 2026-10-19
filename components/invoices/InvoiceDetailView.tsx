@@ -19,7 +19,7 @@ import { FundingProgressBar } from "@/components/invoices/FundingProgressBar";
 import { InvoiceBackButton } from "@/components/invoices/InvoiceBackButton";
 import { InvoiceDocumentsTab } from "@/components/invoices/InvoiceDocumentsTab";
 import { InvoiceFinancials } from "@/components/invoices/InvoiceFinancials";
-import { InvoiceMaturityStatus } from "@/components/invoices/InvoiceMaturityStatus";
+import { InvoiceMaturitySection } from "@/components/invoices/InvoiceMaturitySection";
 import { InvoiceMetaTags } from "@/components/invoices/InvoiceMetaTags";
 import { InvestorSocialProof } from "@/components/invoices/InvestorSocialProof";
 import { InvoiceStatusBadge } from "@/components/invoices/InvoiceStatusBadge";
@@ -276,6 +276,15 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
         minInvestment={minInvestment}
       />
 
+      {invoice.status === "funded" && (
+        <InvoiceMaturitySection
+          invoiceId={invoice.id}
+          maturityDate={invoice.maturity_date}
+          faceValue={invoice.amount}
+          latePenaltyAccrued={invoice.late_penalty_accrued}
+        />
+      )}
+
       {/*
         Demand signals (#422) and the maturity countdown (#423) sit directly
         under the financials: both answer "how much interest is this getting"
@@ -401,10 +410,6 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
             ))}
           </CardContent>
         </Card>
-      )}
-
-      {invoice.status === "funded" && (
-        <InvoiceMaturityStatus maturityDate={invoice.maturity_date} />
       )}
 
       {(invoice.status === "settled" || invoice.status === "funded") && (
