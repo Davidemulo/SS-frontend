@@ -365,3 +365,29 @@ export function filterByTaxonomy(
     return true;
   });
 }
+
+/* ─── Sector chip counts ──────────────────────────────────────────────────── */
+
+/**
+ * Live (open) invoices per sector, for the chip row above the grid (#477).
+ *
+ * Counts every recognised sector, including ones with zero listings, so a chip
+ * never loses its badge just because nothing is open in it right now. Funded,
+ * settled and unclassified invoices are not counted: the badge answers "how
+ * many can I invest in", not "how many exist".
+ */
+export function sectorCounts(
+  invoices: Pick<Invoice, "status" | "category">[]
+): Record<InvoiceCategory, number> {
+  const counts = Object.fromEntries(
+    INVOICE_CATEGORIES.map((category) => [category, 0])
+  ) as Record<InvoiceCategory, number>;
+
+  for (const invoice of invoices) {
+    if (invoice.status !== "open") continue;
+    const category = normalizeCategory(invoice.category);
+    if (category) counts[category] += 1;
+  }
+
+  return counts;
+}

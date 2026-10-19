@@ -18,6 +18,7 @@ export { SecondaryListingCard, SecondaryListingSkeleton } from "./SecondaryListi
 export { SecondaryMarketFiltersPanel } from "./SecondaryMarketFilters";
 export { BuyFractionModal } from "./BuyFractionModal";
 export { TaxonomyFilterPanel } from "./TaxonomyFilterPanel";
+export { SectorChips } from "./SectorChips";
 export { ActiveTaxonomyChips } from "./ActiveTaxonomyChips";
 export { InvoiceTagPills } from "./InvoiceTagPills";
 export { SettlementCountdown } from "./SettlementCountdown";
