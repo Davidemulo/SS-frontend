@@ -39,6 +39,8 @@ import { InvoiceClassificationBadges } from "@/components/marketplace/InvoiceCla
 import { InvoiceTagPills } from "@/components/marketplace/InvoiceTagPills";
 import { SettlementCountdown } from "@/components/marketplace/SettlementCountdown";
 import { InvoiceFraudReport } from "@/components/invoices/InvoiceFraudReport";
+import { AnnouncementFeed } from "@/components/invoices/AnnouncementFeed";
+import { SyndicatePanel } from "@/components/invoices/SyndicatePanel";
 import { truncateAddress } from "@/lib/stellar";
 import { DEFAULT_MIN_INVESTMENT } from "@/lib/invoiceDefaults";
 import { Money } from "@/components/currency";
@@ -339,6 +341,10 @@ export function InvoiceDetailView({ invoiceId }: InvoiceDetailViewProps) {
           </CardContent>
         </Card>
       )}
+
+      <SyndicatePanel invoiceId={invoice.id} />
+
+      <AnnouncementFeed invoiceId={invoice.id} />
 
       <InvoiceDocumentsTab
         invoiceId={invoice.id}
