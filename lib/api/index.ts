@@ -2249,6 +2249,108 @@ export async function fetchPublicFeeHistory(): Promise<FeeChangeLogEntry[]> {
   return res.json();
 }
 
+/* ─── Invoice risk, benchmarks, reports, and contract registry ─────────── */
+
+export type InvoiceRiskType = "funding_risk" | "late_payment" | "default_proximity";
+export type InvoiceRiskSeverity = "low" | "medium" | "high";
+
+export interface InvoiceRiskStatus {
+  active: boolean;
+  risk_type: InvoiceRiskType | null;
+  severity: InvoiceRiskSeverity | null;
+  recommended_action: string | null;
+  resolved_at?: string | null;
+}
+
+export async function fetchInvoiceRiskStatus(invoiceId: string): Promise<InvoiceRiskStatus> {
+  const res = await fetch(`${API_BASE}/invoices/${encodeURIComponent(invoiceId)}/risk-status`);
+  if (!res.ok) throw new Error("Failed to fetch invoice risk status");
+  return res.json();
+}
+
+export interface InvoiceBenchmark {
+  sector: string;
+  invoice_yield: number;
+  sector_avg_yield: number;
+  invoice_avg_settlement_days: number | null;
+  sector_avg_settlement_days: number;
+  issuer_default_rate: number;
+  sector_default_rate: number;
+}
+
+export async function fetchInvoiceBenchmark(invoiceId: string): Promise<InvoiceBenchmark> {
+  const res = await fetch(`${API_BASE}/invoices/${encodeURIComponent(invoiceId)}/benchmark`);
+  if (!res.ok) throw new Error("Failed to fetch invoice benchmark");
+  return res.json();
+}
+
+export const INVOICE_REPORT_REASONS = [
+  "misrepresentation",
+  "false_documents",
+  "non_delivery",
+  "other",
+] as const;
+export type InvoiceReportReason = (typeof INVOICE_REPORT_REASONS)[number];
+
+export interface InvoiceReportStatus {
+  active_reports: number;
+  reported_by_wallet: boolean;
+}
+
+export async function fetchInvoiceReportStatus(
+  invoiceId: string,
+  wallet?: string | null,
+): Promise<InvoiceReportStatus> {
+  const params = wallet ? `?wallet=${encodeURIComponent(wallet)}` : "";
+  const res = await fetch(
+    `${API_BASE}/invoices/${encodeURIComponent(invoiceId)}/report-status${params}`,
+  );
+  if (!res.ok) throw new Error("Failed to fetch invoice report status");
+  return res.json();
+}
+
+export async function submitInvoiceReport(
+  invoiceId: string,
+  input: { reason: InvoiceReportReason; evidence_hash: string; wallet: string },
+  token?: string,
+): Promise<{ report_id: string; transaction_hash?: string }> {
+  const res = await fetch(`${API_BASE}/invoices/${encodeURIComponent(invoiceId)}/reports`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to submit invoice report"));
+  return res.json();
+}
+
+export interface ContractVersion {
+  name: string;
+  current_version: string;
+  address: string;
+  last_upgraded_at: string;
+  compatibility_status: "current" | "outdated";
+}
+
+export interface ContractUpgrade {
+  id: string;
+  contract_name: string;
+  from_version: string;
+  to_version: string;
+  upgraded_at: string;
+}
+
+export interface ContractRegistryResponse {
+  contracts: ContractVersion[];
+  recent_upgrades: ContractUpgrade[];
+}
+
+export async function fetchContractRegistry(token?: string): Promise<ContractRegistryResponse> {
+  const res = await fetch(`${API_BASE}/admin/contracts`, { headers: authHeaders(token) });
+  if (res.status === 403) throw new ApiForbiddenError();
+  if (!res.ok) throw new Error("Failed to fetch contract registry");
+  return res.json();
+}
+
 /* ─── Investor account settings (#444) ──────────────────────────────────── */
 
 export interface AccountProfile {
