@@ -3,7 +3,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { useState } from "react";
-import { ToastProvider } from "@/components/ui/toast";
+import { Toaster } from "@/components/ui/sonner";
+import { notifyApiError } from "@/lib/apiErrors";
+
+import { AuthProvider } from "@/context/AuthContext";
+import { WalletProvider } from "@/context/WalletContext";
+import { CurrencyProvider } from "@/context/CurrencyContext";
+import { AccreditationProvider } from "@/context/AccreditationContext";
+import { PlatformOnboardingTour } from "@/components/onboarding/PlatformOnboardingTour";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -18,8 +25,26 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>{children}</ToastProvider>
-    </QueryClientProvider>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+    >
+      <QueryClientProvider client={queryClient}>
+        {/* #379 — one shared wallet session for the whole app */}
+        <WalletProvider>
+          <AuthProvider>
+            {/* #437 — one shared display currency + live XLM/USD rate for the app */}
+            <CurrencyProvider>
+              <AccreditationProvider>
+                {children}
+                <PlatformOnboardingTour />
+                <Toaster position="top-right" />
+              </AccreditationProvider>
+            </CurrencyProvider>
+          </AuthProvider>
+        </WalletProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
