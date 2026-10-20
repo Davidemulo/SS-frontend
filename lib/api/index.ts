@@ -2863,6 +2863,37 @@ export async function fetchInvestorLoyalty(wallet: string): Promise<InvestorLoya
   return res.json();
 }
 
+// ---------------------------------------------------------------------------
+// Referral tier (#513)
+// ---------------------------------------------------------------------------
+
+export const REFERRAL_TIERS = ["standard", "plus", "elite"] as const;
+
+export type ReferralTierName = (typeof REFERRAL_TIERS)[number];
+
+export interface ReferralTierDefinition {
+  tier: ReferralTierName;
+  /** Cumulative referred volume needed to reach this tier. */
+  threshold: number;
+  /** Commission earned on referred volume, in percent. */
+  commission_rate: number;
+}
+
+export interface ReferralTierStatus {
+  tier: ReferralTierName;
+  /** Cumulative volume invested by the investors this wallet referred. */
+  cumulative_referred_volume: number;
+  tiers: ReferralTierDefinition[];
+}
+
+export async function fetchReferralTier(wallet: string): Promise<ReferralTierStatus> {
+  const res = await fetch(
+    `${API_BASE}/referrals/${encodeURIComponent(wallet)}/tier`,
+  );
+  if (!res.ok) throw new Error("Failed to fetch referral tier");
+  return res.json();
+}
+
 /* ─── Order book depth (#503) ─── */
 
 export interface OrderBookLevel {
