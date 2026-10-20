@@ -24,7 +24,8 @@ function makeInvoice(overrides: Partial<Invoice> = {}): Invoice {
     };
 }
 
-/** The card renders an "Add to compare" control that reads the compare context. */
+/** The card renders a compare toggle and a watchlist bell, both of which read
+ * from providers supplied by `renderWithCardProviders`. */
 function renderCard(ui: ReactElement) {
     return renderWithCardProviders(ui);
 }
