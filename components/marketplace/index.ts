@@ -29,3 +29,4 @@ export { MyListings } from "./MyListings";
 export { StateChangeBadge } from "./StateChangeBadge";
 export { WatchlistButton } from "./WatchlistButton";
 export { EmptyWatchlist } from "./EmptyWatchlist";
+export { BenchmarkChip } from "./BenchmarkChip";

@@ -54,6 +54,14 @@ export interface Invoice {
   maturity_date?: string | null;
   /** Late penalty accrued on-chain after the grace period (issue #498). */
   late_penalty_accrued?: number | null;
+  /** Sector yield benchmark returned alongside the list, for the card chip (#530). */
+  sector_benchmark?: SectorBenchmark | null;
+}
+
+/** Sector average yield and how many invoices it was computed from (#530). */
+export interface SectorBenchmark {
+  sector_avg_yield: number | null;
+  sample_size: number;
 }
 
 /** Category tabs on the marketplace homepage (#452). */
@@ -4459,4 +4467,93 @@ export async function fetchIssuerBlacklist(wallet: string): Promise<IssuerBlackl
     reason: raw.reason ?? null,
     blacklisted_at: raw.blacklisted_at ?? raw.blacklistedAt ?? null,
   };
+}
+
+/* ─── Investor onboarding bonus (#529) ─────────────────────────────────────── */
+
+export interface OnboardingBonus {
+  /** `true` once the wallet has claimed the bonus on its first investment. */
+  is_claimed: boolean;
+  /** Bonus yield in basis points; the chip falls back to 50 (0.5%) when absent. */
+  bonus_yield_bps?: number;
+}
+
+/** Resolves `null` when the backend has no record of the wallet (404). */
+export async function fetchOnboardingBonus(wallet: string): Promise<OnboardingBonus | null> {
+  const res = await fetch(`${API_BASE}/investors/${encodeURIComponent(wallet)}/onboarding-bonus`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error("Failed to fetch onboarding bonus");
+  return res.json();
+}
+
+/* ─── Investor alert preferences (#531) ────────────────────────────────────── */
+
+export interface AlertPreferences {
+  settlement: boolean;
+  kyc_expiry: boolean;
+  watchlist_change: boolean;
+  auto_invest: boolean;
+  maturity_approaching: boolean;
+}
+
+/** Resolves `null` for a wallet that has never saved preferences (404). */
+export async function fetchAlertPreferences(
+  wallet: string,
+  token?: string,
+): Promise<Partial<AlertPreferences> | null> {
+  const res = await fetch(`${API_BASE}/investors/${encodeURIComponent(wallet)}/alert-preferences`, {
+    headers: authHeaders(token),
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error("Failed to fetch alert preferences");
+  return res.json();
+}
+
+export interface SetAlertPreferencesResult {
+  success: boolean;
+  /** Soroban transaction hash for the `set_alert_preferences` call. */
+  tx_hash?: string;
+}
+
+/** Submits the `set_alert_preferences` contract call with every toggle state. */
+export async function setAlertPreferences(
+  wallet: string,
+  preferences: AlertPreferences,
+  token?: string,
+): Promise<SetAlertPreferencesResult> {
+  const res = await fetch(`${API_BASE}/investors/${encodeURIComponent(wallet)}/alert-preferences`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify(preferences),
+  });
+  if (!res.ok) throw new Error("Failed to save alert preferences");
+  return res.json();
+}
+
+/* ─── Invoice performance leaderboard (#527) ───────────────────────────────── */
+
+export const INVOICE_LEADERBOARD_METRICS = [
+  "yield_rate",
+  "settlement_speed",
+  "issuer_reputation",
+] as const;
+export type InvoiceLeaderboardMetric = (typeof INVOICE_LEADERBOARD_METRICS)[number];
+
+export interface InvoiceLeaderboardEntry {
+  invoice_id: string;
+  invoice_name: string;
+  issuer: string;
+  /** Yield %, average settlement days, or reputation 0-100, per the metric. */
+  metric_value: number;
+  sector: string;
+}
+
+export async function fetchInvoiceLeaderboard(
+  metric: InvoiceLeaderboardMetric,
+): Promise<InvoiceLeaderboardEntry[]> {
+  const res = await fetch(
+    `${API_BASE}/analytics/invoices/leaderboard?metric=${encodeURIComponent(metric)}`,
+  );
+  if (!res.ok) throw new Error("Failed to fetch invoice leaderboard");
+  return res.json();
 }

@@ -9,6 +9,7 @@ import { getNetwork, getExplorerUrl } from "@/lib/stellar";
 import { investErrorMessage, type InvestCurrency } from "@/lib/investCurrency";
 import { INVOICES_QUERY_KEY } from "./useInvoices";
 import { PORTFOLIO_QUERY_KEY } from "./usePortfolio";
+import { ONBOARDING_BONUS_QUERY_KEY } from "./useOnboardingBonus";
 
 interface InvestMutationVars {
   invoiceId: string;
@@ -113,6 +114,7 @@ export function useInvestMutation() {
       queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] });
       queryClient.invalidateQueries({ queryKey: INVOICES_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: PORTFOLIO_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ONBOARDING_BONUS_QUERY_KEY });
     },
   });
 

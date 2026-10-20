@@ -17,6 +17,15 @@ export default function SettingsPage() {
         <h2 className="text-lg font-semibold">Auto-invest</h2>
         <AutoInvestSettingsPanel />
       </section>
+      <section id="alerts" className="space-y-3">
+        <h2 className="text-lg font-semibold">Alerts</h2>
+        <Link
+          href="/settings/alerts"
+          className="inline-block text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+        >
+          Alert preferences →
+        </Link>
+      </section>
       <RestartTourSettings />
       <Link
         href="/settings/notifications"

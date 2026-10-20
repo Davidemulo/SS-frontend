@@ -8,6 +8,7 @@ import { InvestCurrencySelector } from "@/components/invoices/InvestCurrencySele
 import { FeeTierDisplay } from "@/components/invoices/FeeTierDisplay";
 import { PriceImpactWarning } from "@/components/invoices/PriceImpactWarning";
 import { TopUpCta } from "@/components/wallet/TopUpCta";
+import { OnboardingBonusChip } from "@/components/invoices/OnboardingBonusChip";
 import { AccreditationGateSteps } from "@/components/invoices/AccreditationGateModal";
 import { useInvestMutation } from "@/hooks/useInvestments";
 import { useFxRate } from "@/hooks/useFxRate";
@@ -107,6 +108,7 @@ export function InvestmentModal({
               <p className="text-sm text-muted-foreground">
                 Enter the amount you&apos;d like to invest
               </p>
+              <OnboardingBonusChip />
             </div>
 
             <div className="flex items-center justify-between text-sm" data-testid="investment-modal-min-investment">
