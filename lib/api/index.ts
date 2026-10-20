@@ -3195,10 +3195,12 @@ export async function fetchInvoiceProtection(
 }
 
 export async function fetchInvoiceRating(
-  invoiceId: string
+  invoiceId: string,
+  walletAddress?: string | null
 ): Promise<InvoiceRatingSummary> {
+  const query = walletAddress ? `?wallet=${encodeURIComponent(walletAddress)}` : "";
   const res = await fetch(
-    `${API_BASE}/invoices/${encodeURIComponent(invoiceId)}/rating`
+    `${API_BASE}/invoices/${encodeURIComponent(invoiceId)}/rating${query}`
   );
   if (!res.ok) throw new Error("Failed to fetch invoice rating");
   return normalizeInvoiceRating(await res.json(), invoiceId);
