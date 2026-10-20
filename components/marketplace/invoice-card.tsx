@@ -13,6 +13,7 @@ import { useComparison } from "./InvoiceComparisonContext";
 import { ShareInvoiceButton } from "@/components/invoices/ShareInvoiceButton";
 import { StateChangeBadge } from "./StateChangeBadge";
 import { WatchlistButton } from "./WatchlistButton";
+import { BenchmarkChip } from "./BenchmarkChip";
 import { Lock } from "lucide-react";
 import type { Invoice } from "@/lib/api";
 import type { WatchlistStateChange } from "@/lib/watchlist";
@@ -84,6 +85,16 @@ export function InvoiceCard({
           </span>
           <CountdownTimer deadline={invoice.due_date} published={published} />
         </div>
+
+        {invoice.yield_percentage !== undefined && (
+          <div className="flex flex-col items-start gap-1" data-testid="invoice-card-yield">
+            <span className="text-sm text-muted-foreground">
+              Yield{" "}
+              <span className="font-medium text-foreground">{invoice.yield_percentage}%</span>
+            </span>
+            <BenchmarkChip invoice={invoice} />
+          </div>
+        )}
 
         <FundingProgressBar
           raised={invoice.raised}

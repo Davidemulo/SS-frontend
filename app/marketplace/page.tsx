@@ -13,6 +13,7 @@ import {
   FeaturedInvoicesCarousel,
   FilterPanel,
   InvoiceComparisonBar,
+  BenchmarkChip,
   InvoiceTagPills,
   InvestorDemandMetrics,
   MarketplaceFilterBar,
@@ -125,6 +126,9 @@ function InvoiceRow({ invoice }: { invoice: Invoice }) {
               {invoice.yield_percentage !== undefined ? `${invoice.yield_percentage}%` : "N/A"}
             </span>
             Yield
+            <div className="mt-1">
+              <BenchmarkChip invoice={invoice} />
+            </div>
           </div>
           {/*
             Replaces the plain investor count: it renders the same figure from
