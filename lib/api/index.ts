@@ -2537,6 +2537,100 @@ export async function confirmTwoFactorSetup(code: string, token?: string): Promi
   if (!res.ok) return readAccountError(res, "Invalid verification code");
 }
 
+/* ─── Auto-invest (#476) ───────────────────────────────────────────────────
+ * The rule lives on-chain: writes hit `set_auto_invest_rule`, the kill switch
+ * hits `disable_auto_invest`, and the activity list is the `AutoInvestExecuted`
+ * event log indexed by the backend. As with the rest of this module the wallet
+ * address is an explicit input.
+ */
+
+export interface AutoInvestRulePayload {
+  sectors: string[];
+  min_yield: number;
+  max_invoice_age_days: number;
+  max_amount_per_invoice: number;
+  is_enabled: boolean;
+  updated_at?: string;
+}
+
+export interface AutoInvestRuleResponse {
+  address: string;
+  /** `null` before the investor has ever configured a rule. */
+  rule: AutoInvestRulePayload | null;
+}
+
+export async function fetchAutoInvestRule(
+  address: string,
+  token?: string,
+): Promise<AutoInvestRuleResponse> {
+  const params = new URLSearchParams({ address });
+  const res = await fetch(`${API_BASE}/auto-invest/rule?${params.toString()}`, {
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw new Error("Failed to fetch auto-invest rule");
+  return res.json();
+}
+
+export interface SetAutoInvestRuleResult {
+  success: boolean;
+  /** Soroban transaction hash for the `set_auto_invest_rule` call. */
+  tx_hash?: string;
+}
+
+export async function setAutoInvestRule(
+  address: string,
+  rule: AutoInvestRulePayload,
+  token?: string,
+): Promise<SetAutoInvestRuleResult> {
+  const res = await fetch(`${API_BASE}/auto-invest/rule`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify({ address, ...rule }),
+  });
+  if (!res.ok) throw new Error("Failed to save auto-invest rule");
+  return res.json();
+}
+
+export async function disableAutoInvest(
+  address: string,
+  token?: string,
+): Promise<{ success: boolean }> {
+  const res = await fetch(`${API_BASE}/auto-invest/disable`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify({ address }),
+  });
+  if (!res.ok) throw new Error("Failed to disable auto-invest");
+  return res.json();
+}
+
+/** One `AutoInvestExecuted` event: an invoice the protocol bought on the
+ * investor's behalf because it matched their rule. */
+export interface AutoInvestExecutedEvent {
+  id: string;
+  invoice_id: string;
+  invoice_title: string;
+  amount: number;
+  yield_percentage: number;
+  sector?: string;
+  executed_at: string;
+  tx_hash?: string;
+}
+
+export async function fetchAutoInvestExecutedEvents(
+  address: string,
+  limit = 5,
+  token?: string,
+): Promise<AutoInvestExecutedEvent[]> {
+  const params = new URLSearchParams({ address, limit: String(limit) });
+  const res = await fetch(
+    `${API_BASE}/auto-invest/events?${params.toString()}`,
+    { headers: authHeaders(token) },
+  );
+  if (!res.ok) throw new Error("Failed to fetch auto-invest activity");
+  return res.json();
+}
+
 // ---------------------------------------------------------------------------
 // Issuer announcements (#502)
 // ---------------------------------------------------------------------------

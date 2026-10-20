@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { TrendingUp, DollarSign, FileText, Clock, ExternalLink, Plus, BarChart2 } from "lucide-react";
+import { TrendingUp, DollarSign, FileText, Clock, ExternalLink, Plus, BarChart2, Bot } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -120,7 +120,7 @@ export function InvestorDashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Button asChild className="h-20 flex-col gap-2">
           <Link href="/marketplace">
             <BarChart2 className="h-8 w-8" />
@@ -140,6 +140,13 @@ export function InvestorDashboard() {
             <Plus className="h-8 w-8" />
             <span className="font-semibold">Manage Listings</span>
             <span className="text-sm text-muted-foreground">Track your watchlist</span>
+          </Link>
+        </Button>
+        <Button asChild variant="outline" className="h-20 flex-col gap-2">
+          <Link href="/settings#auto-invest">
+            <Bot className="h-8 w-8" />
+            <span className="font-semibold">Auto-invest</span>
+            <span className="text-sm text-muted-foreground">Configure automatic investing</span>
           </Link>
         </Button>
       </div>
