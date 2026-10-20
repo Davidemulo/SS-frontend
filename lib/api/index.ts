@@ -3195,10 +3195,12 @@ export async function fetchInvoiceProtection(
 }
 
 export async function fetchInvoiceRating(
-  invoiceId: string
+  invoiceId: string,
+  walletAddress?: string | null
 ): Promise<InvoiceRatingSummary> {
+  const query = walletAddress ? `?wallet=${encodeURIComponent(walletAddress)}` : "";
   const res = await fetch(
-    `${API_BASE}/invoices/${encodeURIComponent(invoiceId)}/rating`
+    `${API_BASE}/invoices/${encodeURIComponent(invoiceId)}/rating${query}`
   );
   if (!res.ok) throw new Error("Failed to fetch invoice rating");
   return normalizeInvoiceRating(await res.json(), invoiceId);
@@ -3383,6 +3385,8 @@ export interface InvoiceRatingSummary {
   average_rating: number;
   rating_count: number;
   user_rating?: number | null;
+  /** Count of ratings per star (1–5). Absent on older backend responses. */
+  distribution?: Record<1 | 2 | 3 | 4 | 5, number>;
 }
 
 export interface InvoiceYieldVesting {
@@ -4107,6 +4111,20 @@ function normalizeInvoiceRating(raw: any, invoiceId: string): InvoiceRatingSumma
         : (raw.userRating !== undefined && raw.userRating !== null
           ? Number(raw.userRating)
           : null),
+    distribution: normalizeRatingDistribution(raw.distribution ?? raw.star_distribution),
+  };
+}
+
+function normalizeRatingDistribution(
+  raw: any
+): Record<1 | 2 | 3 | 4 | 5, number> | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  return {
+    1: Number(raw[1] ?? raw["1"] ?? 0),
+    2: Number(raw[2] ?? raw["2"] ?? 0),
+    3: Number(raw[3] ?? raw["3"] ?? 0),
+    4: Number(raw[4] ?? raw["4"] ?? 0),
+    5: Number(raw[5] ?? raw["5"] ?? 0),
   };
 }
 
@@ -4327,3 +4345,87 @@ const PLATFORM_ACTIVITY_TYPES: PlatformActivityEventType[] = [
   "invoice_settled",
   "new_listing",
 ];
+
+// ---------------------------------------------------------------------------
+// Maturity extension proposals
+// ---------------------------------------------------------------------------
+
+export interface ExtensionProposal {
+  id: string;
+  invoice_id: string;
+  proposed_maturity_date: string;
+  reason: string;
+  votes_for: number;
+  votes_against: number;
+  quorum: number;
+  total_weight: number;
+  ends_at: string;
+  status: "active" | "executed" | "rejected";
+}
+
+export async function fetchExtensionProposal(
+  invoiceId: string
+): Promise<ExtensionProposal | null> {
+  const res = await fetch(
+    `${API_BASE}/invoices/${encodeURIComponent(invoiceId)}/extension-proposal`
+  );
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error("Failed to fetch extension proposal");
+  return res.json();
+}
+
+export async function proposeExtension(
+  invoiceId: string,
+  body: { proposed_maturity_date: string; reason: string },
+  token?: string
+): Promise<ExtensionProposal> {
+  const res = await fetch(
+    `${API_BASE}/invoices/${encodeURIComponent(invoiceId)}/extension-proposal`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders(token) },
+      body: JSON.stringify(body),
+    }
+  );
+  if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to propose extension"));
+  return res.json();
+}
+
+export async function voteOnExtension(
+  proposalId: string,
+  body: { wallet: string; support: boolean },
+  token?: string
+): Promise<ExtensionProposal> {
+  const res = await fetch(
+    `${API_BASE}/extension-proposals/${encodeURIComponent(proposalId)}/votes`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders(token) },
+      body: JSON.stringify(body),
+    }
+  );
+  if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to submit vote"));
+  return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Issuer blacklist
+// ---------------------------------------------------------------------------
+
+export interface IssuerBlacklistStatus {
+  is_blacklisted: boolean;
+  reason: string | null;
+  blacklisted_at: string | null;
+}
+
+export async function fetchIssuerBlacklist(wallet: string): Promise<IssuerBlacklistStatus> {
+  const res = await fetch(`${API_BASE}/issuers/${encodeURIComponent(wallet)}/blacklist`);
+  if (res.status === 404) return { is_blacklisted: false, reason: null, blacklisted_at: null };
+  if (!res.ok) throw new Error("Failed to fetch issuer blacklist status");
+  const raw = await res.json();
+  return {
+    is_blacklisted: Boolean(raw.is_blacklisted ?? raw.isBlacklisted),
+    reason: raw.reason ?? null,
+    blacklisted_at: raw.blacklisted_at ?? raw.blacklistedAt ?? null,
+  };
+}
