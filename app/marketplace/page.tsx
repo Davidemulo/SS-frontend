@@ -17,6 +17,7 @@ import {
   InvoiceTagPills,
   InvestorDemandMetrics,
   MarketplaceFilterBar,
+  NavChip,
   SettlementCountdown,
   SectorChips,
   TaxonomyFilterPanel,
@@ -160,7 +161,9 @@ function InvoiceRow({ invoice }: { invoice: Invoice }) {
             target={invoice.amount}
             investorCount={invoice.investor_count}
           />
-          <div className="mt-3 flex justify-end">
+          <div className="mt-3 flex items-center justify-between gap-2">
+            {/* Fair value against the market price (#546). */}
+            <NavChip invoiceId={invoice.id} fractionPrice={invoice.fraction_price} />
             <CompareToggleButton invoice={invoice} />
           </div>
         </div>

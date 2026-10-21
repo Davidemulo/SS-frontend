@@ -30,3 +30,4 @@ export { StateChangeBadge } from "./StateChangeBadge";
 export { WatchlistButton } from "./WatchlistButton";
 export { EmptyWatchlist } from "./EmptyWatchlist";
 export { BenchmarkChip } from "./BenchmarkChip";
+export { NavChip } from "./NavChip";

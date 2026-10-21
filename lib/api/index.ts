@@ -2435,6 +2435,36 @@ export async function fetchInvoiceBenchmark(invoiceId: string): Promise<InvoiceB
   return res.json();
 }
 
+/* ─── Invoice NAV / fair value (issue #546) ─────────────────────────────── */
+
+/**
+ * The computed fair value of one fraction of an invoice, with the price it is
+ * measured against (#546).
+ */
+export interface InvoiceNav {
+  invoice_id: string;
+  /** Fair value of one fraction in XLM; null when the API cannot compute one. */
+  nav_per_fraction: number | null;
+  /** Price of one fraction in XLM; null when the invoice has no market price. */
+  current_price: number | null;
+  /** When the NAV was computed; null when the API does not report it. */
+  computed_at: string | null;
+}
+
+/**
+ * Fetches the NAV for one invoice (#546).
+ *
+ * A 404 means the invoice has no NAV to show, which is not an error: it
+ * returns `null` so the chip and the invest panel simply stay hidden instead
+ * of surfacing a failure for every unpriced invoice.
+ */
+export async function fetchInvoiceNav(invoiceId: string): Promise<InvoiceNav | null> {
+  const res = await fetch(`${API_BASE}/invoices/${encodeURIComponent(invoiceId)}/nav`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error("Failed to fetch invoice NAV");
+  return normalizeInvoiceNav(await res.json(), invoiceId);
+}
+
 export const INVOICE_REPORT_REASONS = [
   "misrepresentation",
   "false_documents",
@@ -4095,6 +4125,47 @@ function normalizeInvoiceDemandMetrics(raw: any, invoiceId: string): InvoiceDema
     raised: Number(raw.raised ?? raw.funded ?? 0),
     target: Number(raw.target ?? raw.amount ?? raw.face_value ?? 0),
     funded_at: raw.funded_at ?? raw.fundedAt ?? null,
+  };
+}
+
+/** Coerces an API value to a finite number, or null when it is not one. */
+function toFiniteNumberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+/**
+ * Normalises the NAV payload (#546).
+ *
+ * The endpoint has shipped under a few field spellings, so each value is read
+ * from the names it could plausibly carry. A payload with neither a NAV nor a
+ * price is treated as "no NAV" so the UI stays hidden rather than rendering
+ * empty figures.
+ */
+function normalizeInvoiceNav(raw: any, invoiceId: string): InvoiceNav | null {
+  if (!raw || typeof raw !== "object") return null;
+
+  const nav = toFiniteNumberOrNull(
+    raw.nav_per_fraction ?? raw.navPerFraction ?? raw.nav ?? raw.fair_value ?? raw.fairValue
+  );
+  const price = toFiniteNumberOrNull(
+    raw.current_price ??
+      raw.currentPrice ??
+      raw.price ??
+      raw.fraction_price ??
+      raw.fractionPrice
+  );
+  if (nav === null && price === null) return null;
+
+  const computedAt =
+    raw.computed_at ?? raw.computedAt ?? raw.as_of ?? raw.asOf ?? raw.updated_at ?? raw.updatedAt;
+
+  return {
+    invoice_id: raw.invoice_id ?? raw.invoiceId ?? invoiceId,
+    nav_per_fraction: nav,
+    current_price: price,
+    computed_at: computedAt ? String(computedAt) : null,
   };
 }
 
