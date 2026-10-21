@@ -36,8 +36,7 @@ export function FeeTierDisplay({ amount, loyalty }: { amount?: number | null; lo
   const loyaltyTier = loyalty?.tiers.find((tier) => tier.tier === loyalty.tier);
   const loyaltyDiscount = loyaltyTier?.fee_discount ?? 0;
   const discountedFeeAmount = feeAmount !== null && loyaltyDiscount > 0 ? feeAmount * (1 - loyaltyDiscount / 100) : feeAmount;
-  const total =
-    typeof amount === "number" && feeAmount !== null ? amount + discountedFeeAmount : null;
+  const total =`n    typeof amount === "number" && discountedFeeAmount !== null`n      ? amount + discountedFeeAmount`n      : null;
 
   return (
     <div className="space-y-2" data-testid="fee-tier-display">
@@ -54,7 +53,7 @@ export function FeeTierDisplay({ amount, loyalty }: { amount?: number | null; lo
         </Badge>
         {loyaltyDiscount > 0 && (
           <Badge variant="secondary" data-testid="loyalty-fee-discount">
-            {loyalty?.tier} - {loyaltyDiscount}% loyalty discount
+            {loyalty.tier} - {loyaltyDiscount}% loyalty discount
           </Badge>
         )}
         <Popover>
@@ -127,14 +126,16 @@ export function FeeTierDisplay({ amount, loyalty }: { amount?: number | null; lo
             </span>
           </div>
           {loyaltyDiscount > 0 && (
-            <div className="flex justify-between">
-              <span>Loyalty discount</span>
-              <span>-{loyaltyDiscount}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Final fee</span>
-              <span>{discountedFeeAmount?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "-"} XLM</span>
-            </div>
+            <>
+              <div className="flex justify-between">
+                <span>Loyalty discount</span>
+                <span>-{loyaltyDiscount}%</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Final fee</span>
+                <span>{discountedFeeAmount?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "-"} XLM</span>
+              </div>
+            </>
           )}
           <div className="flex justify-between font-semibold text-foreground">
             <span>Total</span>
