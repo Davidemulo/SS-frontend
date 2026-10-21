@@ -8,6 +8,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useFeeTier } from "@/hooks/useFeeTier";
+import type { InvestorLoyalty } from "@/lib/api";
 import { BadgePercent, Info } from "lucide-react";
 
 const FEE_TOOLTIP =
@@ -17,7 +18,7 @@ const FEE_TOOLTIP =
  * Issue #345: dynamic platform fee tier on the invest panel.
  * Fetched from the backend and refreshed every 60s via useFeeTier.
  */
-export function FeeTierDisplay({ amount }: { amount?: number | null }) {
+export function FeeTierDisplay({ amount, loyalty }: { amount?: number | null; loyalty?: InvestorLoyalty | null }) {
   const { data, isLoading } = useFeeTier();
 
   if (isLoading) {
@@ -32,8 +33,11 @@ export function FeeTierDisplay({ amount }: { amount?: number | null }) {
 
   const feeAmount =
     typeof amount === "number" ? (amount * data.fee_percentage) / 100 : null;
+  const loyaltyTier = loyalty?.tiers.find((tier) => tier.tier === loyalty.tier);
+  const loyaltyDiscount = loyaltyTier?.fee_discount ?? 0;
+  const discountedFeeAmount = feeAmount !== null && loyaltyDiscount > 0 ? feeAmount * (1 - loyaltyDiscount / 100) : feeAmount;
   const total =
-    typeof amount === "number" && feeAmount !== null ? amount + feeAmount : null;
+    typeof amount === "number" && feeAmount !== null ? amount + discountedFeeAmount : null;
 
   return (
     <div className="space-y-2" data-testid="fee-tier-display">
@@ -48,6 +52,11 @@ export function FeeTierDisplay({ amount }: { amount?: number | null }) {
           <BadgePercent className="mr-1 size-3.5" />
           Fee {data.fee_percentage}% · {data.tier_label}
         </Badge>
+        {loyaltyDiscount > 0 && (
+          <Badge variant="secondary" data-testid="loyalty-fee-discount">
+            {loyalty.tier} Â· {loyaltyDiscount}% loyalty discount
+          </Badge>
+        )}
         <Popover>
           <PopoverTrigger asChild>
             <button
@@ -109,7 +118,7 @@ export function FeeTierDisplay({ amount }: { amount?: number | null }) {
             <span>{amount.toLocaleString()} XLM</span>
           </div>
           <div className="flex justify-between">
-            <span>Fee ({data.fee_percentage}%)</span>
+            <span>{loyaltyDiscount > 0 ? `Standard fee (${data.fee_percentage}%)` : `Fee (${data.fee_percentage}%)`}</span>
             <span>
               {feeAmount.toLocaleString(undefined, {
                 maximumFractionDigits: 2,
@@ -117,6 +126,16 @@ export function FeeTierDisplay({ amount }: { amount?: number | null }) {
               XLM
             </span>
           </div>
+          {loyaltyDiscount > 0 && (
+            <div className="flex justify-between">
+              <span>Loyalty discount</span>
+              <span>-{loyaltyDiscount}%</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Final fee</span>
+              <span>{discountedFeeAmount?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ?? "-"} XLM</span>
+            </div>
+          )}
           <div className="flex justify-between font-semibold text-foreground">
             <span>Total</span>
             <span>
