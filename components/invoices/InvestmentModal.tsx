@@ -11,6 +11,7 @@ import { TopUpCta } from "@/components/wallet/TopUpCta";
 import { OnboardingBonusChip } from "@/components/invoices/OnboardingBonusChip";
 import { AccreditationGateSteps } from "@/components/invoices/AccreditationGateModal";
 import { useInvestMutation } from "@/hooks/useInvestments";
+import { useInvestorLoyalty } from "@/hooks/useInvestorLoyalty";
 import { useFxRate } from "@/hooks/useFxRate";
 import { useUsdcBalance } from "@/hooks/useUsdcBalance";
 import { useWallet } from "@/context/WalletContext";
@@ -52,6 +53,7 @@ export function InvestmentModal({
   const fxRate = useFxRate(currency);
   const { address, network } = useWallet();
   const { balance, refresh } = useUsdcBalance(address, network);
+  const loyalty = useInvestorLoyalty(address);
 
   // A null balance means the balance is still unknown, which is not the same as
   // being underfunded, so it must not block the investment.
@@ -164,7 +166,7 @@ export function InvestmentModal({
               />
             )}
 
-            <FeeTierDisplay amount={validAmount} />
+            <FeeTierDisplay amount={validAmount} loyalty={loyalty.data} />
 
             {/* #450 — link to the full public fee schedule so the tier shown
                 above can be read in context (what it applies to, and the other
