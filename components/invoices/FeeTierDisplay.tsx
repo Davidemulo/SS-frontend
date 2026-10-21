@@ -52,7 +52,7 @@ export function FeeTierDisplay({ amount, loyalty }: { amount?: number | null; lo
           </PopoverContent>
         </Popover>
       </div>
-      {typeof amount === "number" && feeAmount !== null && total !== null && (
+      {typeof amount === "number" && feeAmount !== null && discountedFeeAmount !== null && total !== null && (
         <div className="space-y-1 text-xs text-muted-foreground" data-testid="fee-cost-breakdown">
           <div className="flex justify-between"><span>Investment</span><span>{amount.toLocaleString()} XLM</span></div>
           <div className="flex justify-between"><span>{loyaltyDiscount > 0 ? `Standard fee (${data.fee_percentage}%)` : `Fee (${data.fee_percentage}%)`}</span><span>{feeAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} XLM</span></div>

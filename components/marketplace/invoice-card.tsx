@@ -14,6 +14,7 @@ import { ShareInvoiceButton } from "@/components/invoices/ShareInvoiceButton";
 import { StateChangeBadge } from "./StateChangeBadge";
 import { WatchlistButton } from "./WatchlistButton";
 import { BenchmarkChip } from "./BenchmarkChip";
+import { NavChip } from "./NavChip";
 import { Lock } from "lucide-react";
 import type { Invoice } from "@/lib/api";
 import type { WatchlistStateChange } from "@/lib/watchlist";
@@ -95,6 +96,10 @@ export function InvoiceCard({
             <BenchmarkChip invoice={invoice} />
           </div>
         )}
+
+        {/* Fair value against the market price (#546). The chip hides itself
+            when the invoice has no NAV, so it is safe to always render. */}
+        <NavChip invoiceId={invoice.id} fractionPrice={invoice.fraction_price} />
 
         <FundingProgressBar
           raised={invoice.raised}
